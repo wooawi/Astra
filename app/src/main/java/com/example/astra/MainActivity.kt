@@ -63,23 +63,19 @@ fun StartScreen(onNextClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween   // 👈 ВАЖНО
+            verticalArrangement = Arrangement.SpaceBetween   
         ) {
 
-            // 🔥 ЗАГОЛОВОК ВВЕРХУ
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
                 text = "Добро пожаловать!",
                 fontSize = 36.sp,
                 fontFamily = Playfair,
-                color = Color.White   // ✅ БЕЛЫЙ ТЕКСТ
+                color = Color.White   
             )
-
-            // 🔥 ПУСТОЕ ПРОСТРАНСТВО (толкает вниз)
             Spacer(modifier = Modifier.weight(1f))
 
-            // 📦 ПЛЕЙСХОЛДЕРЫ ВНИЗУ
 
             OutlinedTextField(
                 value = name,
@@ -142,7 +138,6 @@ fun StartScreen(onNextClick: () -> Unit) {
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ➡️ ИКОНКА ВНИЗУ
             IconButton(
                 onClick = onNextClick,
                 modifier = Modifier.size(70.dp)
@@ -150,7 +145,7 @@ fun StartScreen(onNextClick: () -> Unit) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_arrow_circle_right_24),
                     contentDescription = null,
-                    tint = Color.White,   // ✅ БЕЛАЯ ИКОНКА
+                    tint = Color.White,  
                     modifier = Modifier.size(50.dp)
                 )
             }
