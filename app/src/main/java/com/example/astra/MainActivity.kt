@@ -49,6 +49,9 @@ fun StartScreen(onNextClick: () -> Unit) {
 
     val context = LocalContext.current
 
+    val textColor = Color.Black
+    val containerColor = Color.White
+
     Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
@@ -63,86 +66,136 @@ fun StartScreen(onNextClick: () -> Unit) {
                 .fillMaxSize()
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween   // 👈 ВАЖНО
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
 
-            // 🔥 ЗАГОЛОВОК ВВЕРХУ
             Spacer(modifier = Modifier.height(40.dp))
 
             Text(
                 text = "Добро пожаловать!",
                 fontSize = 36.sp,
                 fontFamily = Playfair,
-                color = Color.White   // ✅ БЕЛЫЙ ТЕКСТ
+                color = Color.White
             )
 
-            // 🔥 ПУСТОЕ ПРОСТРАНСТВО (толкает вниз)
             Spacer(modifier = Modifier.weight(1f))
-
-            // 📦 ПЛЕЙСХОЛДЕРЫ ВНИЗУ
 
             OutlinedTextField(
                 value = name,
-                onValueChange = {
-                    if (it.all { c -> c.isLetter() || c.isWhitespace() }) {
-                        name = it
+                onValueChange = { input ->
+                    if (input.isEmpty() || input.all { c -> c.isLetter() || c.isWhitespace() }) {
+                        name = input
                     }
                 },
-                label = { Text("Имя") },
+                label = { Text("Имя", color = Color.White) },
+                placeholder = { Text("Введите имя", color = Color.LightGray) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedContainerColor = containerColor,
+                    focusedContainerColor = containerColor,
+                    focusedPlaceholderColor = Color.LightGray,
+                    unfocusedPlaceholderColor = Color.LightGray,
+                    focusedLabelColor = textColor,
+                    unfocusedLabelColor = textColor,
+                    focusedTextColor = textColor,
+                    unfocusedTextColor = textColor,
+                    cursorColor = textColor,
+                    focusedBorderColor = Color.Gray,
+                    unfocusedBorderColor = Color.Gray
+                )
+            )
+
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(
                 modifier = Modifier.fillMaxWidth()
-            )
+            ) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    label = { Text("Дата рождения", color = Color.White) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = containerColor,
+                        focusedContainerColor = containerColor,
+                        focusedLabelColor = textColor,
+                        unfocusedLabelColor = textColor,
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = textColor,
+                        focusedBorderColor = Color.Gray,
+                        unfocusedBorderColor = Color.Gray
+                    )
+                )
 
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable {
+                            val cal = Calendar.getInstance()
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, day ->
+                                    date = "%02d.%02d.%04d".format(day, month + 1, year)
+                                },
+                                cal.get(Calendar.YEAR),
+                                cal.get(Calendar.MONTH),
+                                cal.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        }
+                )
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = date,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Дата рождения") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val cal = Calendar.getInstance()
+            Box(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = {},
+                    readOnly = true,
+                    singleLine = true,
+                    label = { Text("Время рождения", color = Color.White) },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = containerColor,
+                        focusedContainerColor = containerColor,
+                        focusedLabelColor = textColor,
+                        unfocusedLabelColor = textColor,
+                        focusedTextColor = textColor,
+                        unfocusedTextColor = textColor,
+                        cursorColor = textColor,
+                        focusedBorderColor = Color.Gray,
+                        unfocusedBorderColor = Color.Gray
+                    )
+                )
 
-                        DatePickerDialog(
-                            context,
-                            { _, year, month, day ->
-                                date = "$day.${month + 1}.$year"
-                            },
-                            cal.get(Calendar.YEAR),
-                            cal.get(Calendar.MONTH),
-                            cal.get(Calendar.DAY_OF_MONTH)
-                        ).show()
-                    }
-            )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clickable {
+                            val cal = Calendar.getInstance()
+                            TimePickerDialog(
+                                context,
+                                { _, hour, minute ->
+                                    time = "%02d:%02d".format(hour, minute)
+                                },
+                                cal.get(Calendar.HOUR_OF_DAY),
+                                cal.get(Calendar.MINUTE),
+                                true
+                            ).show()
+                        }
+                )
+            }
 
-            Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = time,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Время рождения") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
-                        val cal = Calendar.getInstance()
-
-                        TimePickerDialog(
-                            context,
-                            { _, hour, minute ->
-                                time = "%02d:%02d".format(hour, minute)
-                            },
-                            cal.get(Calendar.HOUR_OF_DAY),
-                            cal.get(Calendar.MINUTE),
-                            true
-                        ).show()
-                    }
-            )
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // ➡️ ИКОНКА ВНИЗУ
             IconButton(
                 onClick = onNextClick,
                 modifier = Modifier.size(70.dp)
@@ -150,7 +203,7 @@ fun StartScreen(onNextClick: () -> Unit) {
                 Icon(
                     painter = painterResource(id = R.drawable.baseline_arrow_circle_right_24),
                     contentDescription = null,
-                    tint = Color.White,   // ✅ БЕЛАЯ ИКОНКА
+                    tint = Color.White,
                     modifier = Modifier.size(50.dp)
                 )
             }
