@@ -328,6 +328,28 @@ fun ProfilePage(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = 16.dp, top = 80.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Выход",
+                color = Color.White,
+                fontFamily = Playfair,
+                fontSize = 22.sp
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            IconButton(onClick = onExitClick) {
+                Icon(
+                    painter = painterResource(id = R.drawable.exit),
+                    contentDescription = null,
+                    tint = Color.White
+                )
+            }
+        }
 
         Column(
             modifier = Modifier
@@ -335,37 +357,20 @@ fun ProfilePage(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(110.dp))
+            Spacer(modifier = Modifier.height(400.dp))
 
             ProfileChip(text = name.ifBlank { "Имя не задано" })
             ProfileChip(text = if (date.isBlank()) "Дата рождения не задана" else "Дата рождения: $date")
             ProfileChip(text = if (time.isBlank()) "Время рождения не задано" else "Время рождения: $time")
             ProfileChip(text = if (city.isBlank()) "Город не выбран" else "Город: $city")
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             Button(onClick = { }) {
                 Text("Изменить")
             }
 
             Spacer(modifier = Modifier.weight(1f))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Выход",
-                    color = Color.White,
-                    fontFamily = Playfair,
-                    fontSize = 22.sp
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                IconButton(onClick = onExitClick) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.exit),
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                }
-            }
 
             BottomBar(selected = selected, onTabClick = onTabClick)
         }
