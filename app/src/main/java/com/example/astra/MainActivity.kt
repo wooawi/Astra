@@ -18,6 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,7 +37,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-
         setContent {
             AstraApp()
         }
@@ -46,7 +46,6 @@ class MainActivity : ComponentActivity() {
 val Playfair = FontFamily(
     Font(R.font.playfair_display_regular, FontWeight.Normal)
 )
-
 
 @Composable
 fun AstraApp() {
@@ -58,6 +57,7 @@ fun AstraApp() {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val scope = rememberCoroutineScope()
+    val activity = LocalContext.current as ComponentActivity
 
     val goToPage: (Int) -> Unit = { pageIndex: Int ->
         scope.launch {
@@ -94,16 +94,22 @@ fun AstraApp() {
                     date = date,
                     time = time,
                     city = city,
-                    onExitClick = { },
-                    onTabClick = { pageIndex: Int ->
-                        scope.launch { pagerState.animateScrollToPage(pageIndex) }
+                    onExitClick = {
+                        activity.finish()
+                    },
+                    onEditClick = {
+                        started = false
+                    },
+                    onTabClick = { pageIndex ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(pageIndex)
+                        }
                     }
                 )
             }
         }
     }
 }
-
 @Composable
 fun StartScreen(
     onNextClick: () -> Unit,
@@ -112,16 +118,38 @@ fun StartScreen(
     onTimeChange: (String) -> Unit,
     onCityChange: (String) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("Выберите дату") }
-    var time by remember { mutableStateOf("Выберите время") }
-    var city by remember { mutableStateOf("") }
+    val whiteFieldColors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = Color.White,
+        unfocusedTextColor = Color.White,
+
+        focusedBorderColor = Color.White,
+        unfocusedBorderColor = Color.White,
+
+        focusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
+        unfocusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
+
+        focusedContainerColor = Color.Transparent,
+        unfocusedContainerColor = Color.Transparent,
+        disabledContainerColor = Color.Transparent,
+
+        disabledTextColor = Color.White,
+        disabledBorderColor = Color.White
+    )
+
+    var name by rememberSaveable { mutableStateOf("") }
+    var city by rememberSaveable { mutableStateOf("") }
+
+    var date by rememberSaveable { mutableStateOf("") }
+    var time by rememberSaveable { mutableStateOf("") }
 
     val context = LocalContext.current
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
         Image(
-            painter = painterResource(id = R.drawable.bgbg),
+            painter = painterResource(R.drawable.bgbg),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -130,12 +158,10 @@ fun StartScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
-
+            Spacer(modifier = Modifier.height(34.dp))
             Text(
                 text = "Добро пожаловать!",
                 fontSize = 36.sp,
@@ -148,30 +174,36 @@ fun StartScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = {
-                    if (it.all { c -> c.isLetter() || c.isWhitespace() }) {
-                        name = it
-                        onNameChange(it)
-                    }
+                    name = it
+                    onNameChange(it)
                 },
-                label = { Text("Имя") },
+                placeholder = {
+                    Text("Введите имя")
+                },
+                colors = whiteFieldColors,
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = date,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Дата рождения") },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
+
                         val cal = Calendar.getInstance()
+
                         DatePickerDialog(
                             context,
                             { _, year, month, day ->
-                                date = "$day.${month + 1}.$year"
+
+                                date = "%02d.%02d.%04d".format(
+                                    day,
+                                    month + 1,
+                                    year
+                                )
+
                                 onDateChange(date)
                             },
                             cal.get(Calendar.YEAR),
@@ -179,23 +211,42 @@ fun StartScreen(
                             cal.get(Calendar.DAY_OF_MONTH)
                         ).show()
                     }
-            )
+            ) {
+                OutlinedTextField(
+                    value = date,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    placeholder = {
+                        Text(
+                            "Дата рождения",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    colors = whiteFieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = time,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Время рождения") },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
+
                         val cal = Calendar.getInstance()
+
                         TimePickerDialog(
                             context,
                             { _, hour, minute ->
-                                time = "%02d:%02d".format(hour, minute)
+
+                                time = "%02d:%02d".format(
+                                    hour,
+                                    minute
+                                )
+
                                 onTimeChange(time)
                             },
                             cal.get(Calendar.HOUR_OF_DAY),
@@ -203,34 +254,54 @@ fun StartScreen(
                             true
                         ).show()
                     }
-            )
+            ) {
+                OutlinedTextField(
+                    value = time,
+                    onValueChange = {},
+                    readOnly = true,
+                    enabled = false,
+                    placeholder = {
+                        Text(
+                            "Время рождения",
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                    },
+                    colors = whiteFieldColors,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
 
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
                 value = city,
                 onValueChange = {
-                    if (it.all { c -> c.isLetter() || c.isWhitespace() }) {
-                        city = it
-                        onCityChange(it)
-                    }
+                    city = it
+                    onCityChange(it)
                 },
-                label = { Text("Город") },
-                placeholder = { Text("Введите город") },
+                placeholder = {
+                    Text("Введите город")
+                },
+                colors = whiteFieldColors,
+                singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             IconButton(
                 onClick = onNextClick,
-                modifier = Modifier.size(70.dp)
+                modifier = Modifier.size(72.dp)
             ) {
+
                 Icon(
-                    painter = painterResource(id = R.drawable.baseline_arrow_circle_right_24),
+                    painter = painterResource(
+                        R.drawable.baseline_arrow_circle_right_24
+                    ),
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(50.dp)
+                    modifier = Modifier.size(56.dp)
                 )
             }
 
@@ -238,7 +309,6 @@ fun StartScreen(
         }
     }
 }
-
 @Composable
 fun MoonPage(
     selected: Int,
@@ -324,6 +394,7 @@ fun ProfilePage(
     time: String,
     city: String,
     onExitClick: () -> Unit,
+    onEditClick: () -> Unit,
     onTabClick: (Int) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -379,7 +450,9 @@ fun ProfilePage(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Button(onClick = { }) {
+                Button(
+                    onClick = onEditClick
+                ) {
                     Text("Изменить")
                 }
             }
@@ -481,7 +554,7 @@ fun AdviceMiniCard(title: String, icon: Int, modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF0C6E0)),
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
-            .height(400.dp)
+            .height(350.dp)
             .clickable { /* заглушка */ }
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
