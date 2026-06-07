@@ -12,6 +12,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -276,15 +277,17 @@ fun AdvicePage(
                 .fillMaxSize()
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.Top
         ) {
+            Spacer(modifier = Modifier.height(50.dp))
+
             AdviceCard(
                 title = "Совет от луны",
                 text = "заглушка текста\nзаглушка текста",
                 icon = R.drawable.cat
             )
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -295,13 +298,15 @@ fun AdvicePage(
                     icon = R.drawable.cat,
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(20.dp))
                 AdviceMiniCard(
                     title = "Матрица дня",
                     icon = R.drawable.woman,
                     modifier = Modifier.weight(1f)
                 )
             }
+
+            Spacer(modifier = Modifier.height(10.dp))  // <-- добавили отступ снизу
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -328,10 +333,11 @@ fun ProfilePage(
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
+
         Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(end = 16.dp, top = 80.dp),
+                .padding(end = 16.dp, top = 60.dp),
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -354,24 +360,31 @@ fun ProfilePage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
+                .padding(bottom = 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(400.dp))
+            Spacer(modifier = Modifier.height(380.dp))
 
-            ProfileChip(text = name.ifBlank { "Имя не задано" })
-            ProfileChip(text = if (date.isBlank()) "Дата рождения не задана" else "Дата рождения: $date")
-            ProfileChip(text = if (time.isBlank()) "Время рождения не задано" else "Время рождения: $time")
-            ProfileChip(text = if (city.isBlank()) "Город не выбран" else "Город: $city")
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Column(
+                modifier = Modifier
+                    .wrapContentSize(Alignment.Center)
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ProfileChip(text = name.ifBlank { "Имя не задано" })
+                ProfileChip(text = if (date.isBlank()) "Дата рождения не задана" else "Дата рождения: $date")
+                ProfileChip(text = if (time.isBlank()) "Время рождения не задана" else "Время рождения: $time")
+                ProfileChip(text = if (city.isBlank()) "Город не выбран" else "Город: $city")
 
-            Button(onClick = { }) {
-                Text("Изменить")
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Button(onClick = { }) {
+                    Text("Изменить")
+                }
             }
 
             Spacer(modifier = Modifier.weight(1f))
-
             BottomBar(selected = selected, onTabClick = onTabClick)
         }
     }
@@ -384,7 +397,7 @@ fun BottomBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(86.dp)
+            .height(100.dp)
             .background(Color(0xFF14091F)),
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.CenterVertically
@@ -429,10 +442,10 @@ fun BottomTab(
             painter = painterResource(id = if (selected) iconColor else iconNone),
             contentDescription = null,
             tint = Color.Unspecified,
-            modifier = Modifier.size(28.dp)
+            modifier = Modifier.size(36.dp)
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(text = title, color = Color.White, fontSize = 12.sp)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(text = title, color = Color.White, fontSize = 13.sp)
     }
 }
 
@@ -443,7 +456,7 @@ fun AdviceCard(title: String, text: String, icon: Int) {
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
+            .height(260.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
             Column {
@@ -456,7 +469,7 @@ fun AdviceCard(title: String, text: String, icon: Int) {
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .size(64.dp)
+                    .size(90.dp)
             )
         }
     }
@@ -468,7 +481,7 @@ fun AdviceMiniCard(title: String, icon: Int, modifier: Modifier = Modifier) {
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF0C6E0)),
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
-            .height(180.dp)
+            .height(400.dp)
             .clickable { /* заглушка */ }
     ) {
         Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
@@ -482,8 +495,8 @@ fun AdviceMiniCard(title: String, icon: Int, modifier: Modifier = Modifier) {
                 painter = painterResource(icon),
                 contentDescription = null,
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .size(78.dp)
+                    .align(Alignment.Center)
+                    .size(90.dp)
             )
         }
     }
