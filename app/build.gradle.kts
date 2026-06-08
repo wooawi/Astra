@@ -51,6 +51,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.places)
+    implementation("com.kizitonwose.calendar:compose:2.6.0")
     implementation("androidx.compose.foundation:foundation")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

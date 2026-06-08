@@ -32,6 +32,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.astra.R
 import java.util.Calendar
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.ui.draw.clip
+import java.time.LocalDate
+import java.time.YearMonth
+import java.time.format.TextStyle
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,6 +57,12 @@ val Playfair = FontFamily(
     Font(R.font.playfair_display_regular, FontWeight.Normal)
 )
 
+enum class AdviceScreen {
+    MAIN,
+    HOROSCOPE,
+    MATRIX
+}
+
 @Composable
 fun AstraApp() {
     var name by remember { mutableStateOf("") }
@@ -57,12 +73,10 @@ fun AstraApp() {
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val scope = rememberCoroutineScope()
-    val activity = LocalContext.current as ComponentActivity
+    val context = LocalContext.current
 
-    val goToPage: (Int) -> Unit = { pageIndex: Int ->
-        scope.launch {
-            pagerState.animateScrollToPage(pageIndex)
-        }
+    var adviceScreen by remember {
+        mutableStateOf(AdviceScreen.MAIN)
     }
 
     if (!started) {
@@ -82,12 +96,37 @@ fun AstraApp() {
                         scope.launch { pagerState.animateScrollToPage(pageIndex) }
                     }
                 )
-                1 -> AdvicePage(
-                    selected = pagerState.currentPage,
-                    onTabClick = { pageIndex: Int ->
-                        scope.launch { pagerState.animateScrollToPage(pageIndex) }
+                1 -> {
+                    when (adviceScreen) {
+
+                        AdviceScreen.MAIN -> AdvicePage(
+                            selected = pagerState.currentPage,
+                            onTabClick = { pageIndex ->
+                                scope.launch {
+                                    pagerState.animateScrollToPage(pageIndex)
+                                }
+                            },
+                            onHoroscopeClick = {
+                                adviceScreen = AdviceScreen.HOROSCOPE
+                            },
+                            onMatrixClick = {
+                                adviceScreen = AdviceScreen.MATRIX
+                            }
+                        )
+
+                        AdviceScreen.HOROSCOPE -> HoroscopePage(
+                            onBackClick = {
+                                adviceScreen = AdviceScreen.MAIN
+                            }
+                        )
+
+                        AdviceScreen.MATRIX -> MatrixPage(
+                            onBackClick = {
+                                adviceScreen = AdviceScreen.MAIN
+                            }
+                        )
                     }
-                )
+                }
                 2 -> ProfilePage(
                     selected = pagerState.currentPage,
                     name = name,
@@ -95,7 +134,7 @@ fun AstraApp() {
                     time = time,
                     city = city,
                     onExitClick = {
-                        activity.finish()
+                        (context as? ComponentActivity)?.finish()
                     },
                     onEditClick = {
                         started = false
@@ -178,7 +217,10 @@ fun StartScreen(
                     onNameChange(it)
                 },
                 placeholder = {
-                    Text("Введите имя")
+                    Text(
+                        text = "Введите имя",
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
                 },
                 colors = whiteFieldColors,
                 singleLine = true,
@@ -219,8 +261,9 @@ fun StartScreen(
                     enabled = false,
                     placeholder = {
                         Text(
-                            "Дата рождения",
-                            color = Color.White.copy(alpha = 0.7f)
+                            text = "Дата рождения",
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 3.dp)
                         )
                     },
                     colors = whiteFieldColors,
@@ -262,8 +305,9 @@ fun StartScreen(
                     enabled = false,
                     placeholder = {
                         Text(
-                            "Время рождения",
-                            color = Color.White.copy(alpha = 0.7f)
+                            text = "Время рождения",
+                            color = Color.White.copy(alpha = 0.7f),
+                            modifier = Modifier.padding(top = 3.dp)
                         )
                     },
                     colors = whiteFieldColors,
@@ -281,7 +325,10 @@ fun StartScreen(
                     onCityChange(it)
                 },
                 placeholder = {
-                    Text("Введите город")
+                    Text(
+                        text = "Введите город",
+                        modifier = Modifier.padding(top = 3.dp)
+                    )
                 },
                 colors = whiteFieldColors,
                 singleLine = true,
@@ -310,21 +357,203 @@ fun StartScreen(
     }
 }
 @Composable
+fun MoonCalendarCard(
+    month: YearMonth,
+    selectedDate: LocalDate,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onDateSelected: (LocalDate) -> Unit
+) {
+
+    val firstDay = month.atDay(1)
+    val startOffset = (firstDay.dayOfWeek.value + 6) % 7
+    val daysInMonth = month.lengthOfMonth()
+
+    val cells = mutableListOf<LocalDate?>()
+
+    repeat(startOffset) {
+        cells.add(null)
+    }
+
+    repeat(daysInMonth) {
+        cells.add(month.atDay(it + 1))
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(
+            topStart = 40.dp,
+            topEnd = 40.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF3A2358).copy(alpha = 0.92f)
+        )
+    ) {
+
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Text(
+                    "<",
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    modifier = Modifier.clickable {
+                        onPreviousMonth()
+                    }
+                )
+
+                Spacer(modifier = Modifier.width(20.dp))
+
+                Text(
+                    text = month.month.getDisplayName(
+                        TextStyle.FULL,
+                        Locale("ru")
+                    ).replaceFirstChar { it.uppercase() } +
+                            " ${month.year}",
+                    color = Color.White,
+                    fontSize = 24.sp,
+                    fontFamily = Playfair
+                )
+
+                Spacer(modifier = Modifier.width(20.dp))
+
+                Text(
+                    ">",
+                    color = Color.White,
+                    fontSize = 28.sp,
+                    modifier = Modifier.clickable {
+                        onNextMonth()
+                    }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            val weekDays = listOf(
+                "Пн", "Вт", "Ср", "Чт",
+                "Пт", "Сб", "Вс"
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                weekDays.forEach {
+                    Text(
+                        text = it,
+                        color = Color.White.copy(alpha = 0.7f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(7),
+                modifier = Modifier.height(190.dp),
+                userScrollEnabled = false
+            ) {
+
+                items(cells) { date ->
+
+                    Box(
+                        modifier = Modifier
+                            .padding(2.dp)
+                            .size(30.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        if (date != null) {
+
+                            val isSelected =
+                                date == selectedDate
+
+                            Box(
+                                modifier = Modifier
+                                    .size(26.dp)
+                                    .clip(
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .background(
+                                        if (isSelected)
+                                            Color(0xFFB12BE4)
+                                        else
+                                            Color.Transparent
+                                    )
+                                    .clickable {
+                                        onDateSelected(date)
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+
+                                Text(
+                                    text = date.dayOfMonth.toString(),
+                                    color = Color.White,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
 fun MoonPage(
     selected: Int,
     onTabClick: (Int) -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    var currentMonth by remember {
+        mutableStateOf(YearMonth.now())
+    }
+
+    var selectedDate by remember {
+        mutableStateOf(LocalDate.now())
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
         Image(
-            painter = painterResource(id = R.drawable.moon),
+            painter = painterResource(R.drawable.moon),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
         )
 
-        Column(modifier = Modifier.fillMaxSize()) {
-            Spacer(modifier = Modifier.weight(1f))
-            BottomBar(selected = selected, onTabClick = onTabClick)
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+
+            Spacer(modifier = Modifier.weight(1.3f))
+
+            MoonCalendarCard(
+                month = currentMonth,
+                selectedDate = selectedDate,
+                onPreviousMonth = {
+                    currentMonth = currentMonth.minusMonths(1)
+                },
+                onNextMonth = {
+                    currentMonth = currentMonth.plusMonths(1)
+                },
+                onDateSelected = {
+                    selectedDate = it
+                }
+            )
+
+            BottomBar(
+                selected = selected,
+                onTabClick = onTabClick
+            )
         }
     }
 }
@@ -332,9 +561,12 @@ fun MoonPage(
 @Composable
 fun AdvicePage(
     selected: Int,
-    onTabClick: (Int) -> Unit
+    onTabClick: (Int) -> Unit,
+    onHoroscopeClick: () -> Unit,
+    onMatrixClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
+
         Image(
             painter = painterResource(id = R.drawable.advice),
             contentDescription = null,
@@ -345,10 +577,10 @@ fun AdvicePage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
+                .padding(horizontal = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
+
             Spacer(modifier = Modifier.height(50.dp))
 
             AdviceCard(
@@ -360,23 +592,29 @@ fun AdvicePage(
             Spacer(modifier = Modifier.height(20.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.fillMaxWidth()
             ) {
+
                 AdviceMiniCard(
                     title = "Гороскоп дня",
                     icon = R.drawable.cat,
-                    modifier = Modifier.weight(1f)
+                    cardColor = Color(0xFFE8C8FF),
+                    textColor = Color(0xFF6A1B9A),
+                    modifier = Modifier.weight(1f),
+                    onClick = onHoroscopeClick
                 )
-                Spacer(modifier = Modifier.width(20.dp))
+
+                Spacer(modifier = Modifier.width(12.dp))
+
                 AdviceMiniCard(
                     title = "Матрица дня",
                     icon = R.drawable.woman,
-                    modifier = Modifier.weight(1f)
+                    cardColor = Color(0xFFC6F2E6),
+                    textColor = Color(0xFF00695C),
+                    modifier = Modifier.weight(1f),
+                    onClick = onMatrixClick
                 )
             }
-
-            Spacer(modifier = Modifier.height(10.dp))  // <-- добавили отступ снизу
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -397,7 +635,9 @@ fun ProfilePage(
     onEditClick: () -> Unit,
     onTabClick: (Int) -> Unit
 ) {
+
     Box(modifier = Modifier.fillMaxSize()) {
+
         Image(
             painter = painterResource(id = R.drawable.profile),
             contentDescription = null,
@@ -412,14 +652,19 @@ fun ProfilePage(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Text(
                 text = "Выход",
                 color = Color.White,
                 fontFamily = Playfair,
                 fontSize = 22.sp
             )
+
             Spacer(modifier = Modifier.width(10.dp))
-            IconButton(onClick = onExitClick) {
+
+            IconButton(
+                onClick = onExitClick
+            ) {
                 Icon(
                     painter = painterResource(id = R.drawable.exit),
                     contentDescription = null,
@@ -429,36 +674,203 @@ fun ProfilePage(
         }
 
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = 0.dp),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(380.dp))
 
+            Spacer(modifier = Modifier.height(380.dp))
 
             Column(
                 modifier = Modifier
-                    .wrapContentSize(Alignment.Center)
+                    .fillMaxWidth()
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ProfileChip(text = name.ifBlank { "Имя не задано" })
-                ProfileChip(text = if (date.isBlank()) "Дата рождения не задана" else "Дата рождения: $date")
-                ProfileChip(text = if (time.isBlank()) "Время рождения не задана" else "Время рождения: $time")
-                ProfileChip(text = if (city.isBlank()) "Город не выбран" else "Город: $city")
 
-                Spacer(modifier = Modifier.height(10.dp))
+                ProfileChip(
+                    text = name.ifBlank {
+                        "Имя не задано"
+                    }
+                )
+
+                ProfileChip(
+                    text = if (date.isBlank())
+                        "Дата рождения не задана"
+                    else
+                        "Дата рождения: $date"
+                )
+
+                ProfileChip(
+                    text = if (time.isBlank())
+                        "Время рождения не задано"
+                    else
+                        "Время рождения: $time"
+                )
+
+                ProfileChip(
+                    text = if (city.isBlank())
+                        "Город не выбран"
+                    else
+                        "Город: $city"
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
-                    onClick = onEditClick
+                    onClick = onEditClick,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF5B3B8C)
+                    ),
+                    shape = RoundedCornerShape(20.dp)
                 ) {
                     Text("Изменить")
                 }
             }
 
             Spacer(modifier = Modifier.weight(1f))
-            BottomBar(selected = selected, onTabClick = onTabClick)
+
+            BottomBar(
+                selected = selected,
+                onTabClick = onTabClick
+            )
+        }
+    }
+}
+@Composable
+fun HoroscopePage(
+    onBackClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        Image(
+            painter = painterResource(R.drawable.horoscope),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 70.dp,
+                bottom = 40.dp
+            )
+        ) {
+
+            item {
+
+                IconButton(
+                    onClick = onBackClick
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            R.drawable.baseline_arrow_circle_right_24
+                        ),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .graphicsLayer {
+                                scaleX = -1f
+                            }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF5B3B8C)
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+
+                    Text(
+                        text = "Текст гороскопа дня...\n\nОчень много текста...\n\nОчень много текста...",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(400.dp))
+            }
+        }
+    }
+}
+@Composable
+fun MatrixPage(
+    onBackClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+
+        Image(
+            painter = painterResource(R.drawable.matrix),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 20.dp,
+                end = 20.dp,
+                top = 70.dp,
+                bottom = 40.dp
+            )
+        ) {
+
+            item {
+
+                IconButton(
+                    onClick = onBackClick
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            R.drawable.baseline_arrow_circle_right_24
+                        ),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier
+                            .size(42.dp)
+                            .graphicsLayer {
+                                scaleX = -1f
+                            }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color(0xFF5B3B8C)
+                    ),
+                    shape = RoundedCornerShape(24.dp)
+                ) {
+
+                    Text(
+                        text = "Текст матрицы дня...\n\nОчень много текста...\n\nОчень много текста...",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        modifier = Modifier.padding(20.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(400.dp))
+            }
         }
     }
 }
@@ -549,27 +961,45 @@ fun AdviceCard(title: String, text: String, icon: Int) {
 }
 
 @Composable
-fun AdviceMiniCard(title: String, icon: Int, modifier: Modifier = Modifier) {
+fun AdviceMiniCard(
+    title: String,
+    icon: Int,
+    cardColor: Color,
+    textColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0C6E0)),
+        colors = CardDefaults.cardColors(
+            containerColor = cardColor
+        ),
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
-            .height(350.dp)
-            .clickable { /* заглушка */ }
+            .height(420.dp)
+            .clickable {
+                onClick()
+            }
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+
             Text(
-                title,
-                color = Color(0xFF4A255F),
+                text = title,
+                color = textColor,
                 fontSize = 20.sp,
                 fontFamily = Playfair
             )
+
             Image(
                 painter = painterResource(icon),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(90.dp)
+                    .size(100.dp)
             )
         }
     }
@@ -579,7 +1009,9 @@ fun AdviceMiniCard(title: String, icon: Int, modifier: Modifier = Modifier) {
 fun ProfileChip(text: String) {
     Card(
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0C6E0)),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFFF0C6E0)
+        ),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 6.dp)
