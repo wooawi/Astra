@@ -975,7 +975,7 @@ fun AdviceMiniCard(
         ),
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
-            .height(420.dp)
+            .height(370.dp)
             .clickable {
                 onClick()
             }
