@@ -1,32 +1,32 @@
 package com.example.astra
 
-fun getZodiacSign(day: Int, month: Int): String {
+fun getZodiacSign(date: String): String {
 
-    return when {
+    if (date.isBlank()) return "aries"
 
-        (month == 3 && day >= 21) || (month == 4 && day <= 19) -> "aries"
+    val parts = date.split(".")
 
-        (month == 4 && day >= 20) || (month == 5 && day <= 20) -> "taurus"
+    if (parts.size != 3) return "aries"
 
-        (month == 5 && day >= 21) || (month == 6 && day <= 20) -> "gemini"
+    val day = parts[0].toInt()
+    val month = parts[1].toInt()
 
-        (month == 6 && day >= 21) || (month == 7 && day <= 22) -> "cancer"
+    return when (month) {
 
-        (month == 7 && day >= 23) || (month == 8 && day <= 22) -> "leo"
+        1 -> if (day <= 19) "capricorn" else "aquarius"
+        2 -> if (day <= 18) "aquarius" else "pisces"
+        3 -> if (day <= 20) "pisces" else "aries"
+        4 -> if (day <= 19) "aries" else "taurus"
+        5 -> if (day <= 20) "taurus" else "gemini"
+        6 -> if (day <= 20) "gemini" else "cancer"
+        7 -> if (day <= 22) "cancer" else "leo"
+        8 -> if (day <= 22) "leo" else "virgo"
+        9 -> if (day <= 22) "virgo" else "libra"
+        10 -> if (day <= 22) "libra" else "scorpio"
+        11 -> if (day <= 21) "scorpio" else "sagittarius"
+        12 -> if (day <= 21) "sagittarius" else "capricorn"
 
-        (month == 8 && day >= 23) || (month == 9 && day <= 22) -> "virgo"
-
-        (month == 9 && day >= 23) || (month == 10 && day <= 22) -> "libra"
-
-        (month == 10 && day >= 23) || (month == 11 && day <= 21) -> "scorpio"
-
-        (month == 11 && day >= 22) || (month == 12 && day <= 21) -> "sagittarius"
-
-        (month == 12 && day >= 22) || (month == 1 && day <= 19) -> "capricorn"
-
-        (month == 1 && day >= 20) || (month == 2 && day <= 18) -> "aquarius"
-
-        else -> "pisces"
+        else -> "aries"
     }
 }
 fun zodiacIcon(sign: String): Int {

@@ -76,6 +76,9 @@ fun AstraApp() {
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    var selectedMoonDate by remember {
+        mutableStateOf(LocalDate.now())
+    }
 
     var adviceScreen by remember {
         mutableStateOf(AdviceScreen.MAIN)
@@ -94,8 +97,14 @@ fun AstraApp() {
             when (page) {
                 0 -> MoonPage(
                     selected = pagerState.currentPage,
-                    onTabClick = { pageIndex: Int ->
-                        scope.launch { pagerState.animateScrollToPage(pageIndex) }
+                    selectedDate = selectedMoonDate,
+                    onDateChange = {
+                        selectedMoonDate = it
+                    },
+                    onTabClick = { pageIndex ->
+                        scope.launch {
+                            pagerState.animateScrollToPage(pageIndex)
+                        }
                     }
                 )
                 1 -> {
@@ -103,6 +112,7 @@ fun AstraApp() {
 
                         AdviceScreen.MAIN -> AdvicePage(
                             selected = pagerState.currentPage,
+                            userBirthDate = date,
                             onTabClick = { pageIndex ->
                                 scope.launch {
                                     pagerState.animateScrollToPage(pageIndex)
@@ -115,8 +125,8 @@ fun AstraApp() {
                                 adviceScreen = AdviceScreen.MATRIX
                             }
                         )
-
                         AdviceScreen.HOROSCOPE -> HoroscopePage(
+                            userBirthDate = date,
                             onBackClick = {
                                 adviceScreen = AdviceScreen.MAIN
                             }
@@ -511,6 +521,8 @@ fun MoonCalendarCard(
 @Composable
 fun MoonPage(
     selected: Int,
+    selectedDate: LocalDate,
+    onDateChange: (LocalDate) -> Unit,
     onTabClick: (Int) -> Unit
 ) {
 
@@ -607,14 +619,12 @@ fun MoonPage(
 @Composable
 fun AdvicePage(
     selected: Int,
+    userBirthDate: String,
     onTabClick: (Int) -> Unit,
     onHoroscopeClick: () -> Unit,
     onMatrixClick: () -> Unit
 ) {
-
     val moonViewModel: MoonViewModel = viewModel()
-
-
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -648,7 +658,7 @@ fun AdvicePage(
                 modifier = Modifier.fillMaxWidth()
             ) {
 
-                val sign = "leo"
+                val sign = getZodiacSign(userBirthDate)
 
                 AdviceMiniCard(
                     title = "Гороскоп дня",
@@ -800,13 +810,15 @@ fun ProfilePage(
 }
 @Composable
 fun HoroscopePage(
+    userBirthDate: String,
     onBackClick: () -> Unit
-) {
+){
 
     val viewModel: HoroscopeViewModel = viewModel()
+    val sign = getZodiacSign(userBirthDate)
 
     LaunchedEffect(Unit) {
-        viewModel.load("leo")
+        viewModel.load(sign)
     }
 
     Box(
