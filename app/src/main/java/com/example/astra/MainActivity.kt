@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.LocalDateTime
 import com.example.astra.R
 import java.util.Calendar
 import androidx.compose.foundation.lazy.LazyColumn
@@ -42,6 +43,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -511,12 +513,21 @@ fun MoonPage(
     selected: Int,
     onTabClick: (Int) -> Unit
 ) {
+
     var currentMonth by remember {
         mutableStateOf(YearMonth.now())
     }
 
     var selectedDate by remember {
         mutableStateOf(LocalDate.now())
+    }
+
+    val moonViewModel: MoonViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        moonViewModel.loadMoon(
+            LocalDateTime.now().toString()
+        )
     }
 
     Box(
@@ -531,10 +542,40 @@ fun MoonPage(
         )
 
         Column(
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Spacer(modifier = Modifier.weight(1.3f))
+            Spacer(modifier = Modifier.height(50.dp))
+
+            Image(
+                painter = painterResource(
+                    getMoonImage(moonViewModel.moonPhase)
+                ),
+                contentDescription = null,
+                modifier = Modifier.size(300.dp)
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = moonViewModel.moonPhase,
+                color = Color.White,
+                fontSize = 24.sp,
+                fontFamily = Playfair
+            )
+
+            Text(
+                text = "${moonViewModel.illumination}%",
+                color = Color.White,
+                fontSize = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+
+
+            Spacer(modifier = Modifier.weight(1f))
 
             MoonCalendarCard(
                 month = currentMonth,
@@ -545,8 +586,13 @@ fun MoonPage(
                 onNextMonth = {
                     currentMonth = currentMonth.plusMonths(1)
                 },
-                onDateSelected = {
-                    selectedDate = it
+                onDateSelected = { date ->
+
+                    selectedDate = date
+
+                    moonViewModel.loadMoon(
+                        date.toString() + "T00:00:00"
+                    )
                 }
             )
 
@@ -565,10 +611,17 @@ fun AdvicePage(
     onHoroscopeClick: () -> Unit,
     onMatrixClick: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+
+    val moonViewModel: MoonViewModel = viewModel()
+
+
+
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
 
         Image(
-            painter = painterResource(id = R.drawable.advice),
+            painter = painterResource(R.drawable.advice),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -585,7 +638,7 @@ fun AdvicePage(
 
             AdviceCard(
                 title = "Совет от луны",
-                text = "заглушка текста\nзаглушка текста",
+                text = moonViewModel.moonText,
                 icon = R.drawable.cat
             )
 
@@ -595,9 +648,11 @@ fun AdvicePage(
                 modifier = Modifier.fillMaxWidth()
             ) {
 
+                val sign = "leo"
+
                 AdviceMiniCard(
                     title = "Гороскоп дня",
-                    icon = R.drawable.cat,
+                    icon = zodiacIcon(sign),
                     cardColor = Color(0xFFE8C8FF),
                     textColor = Color(0xFF6A1B9A),
                     modifier = Modifier.weight(1f),
@@ -617,9 +672,16 @@ fun AdvicePage(
             }
         }
 
-        Column(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
+
             Spacer(modifier = Modifier.weight(1f))
-            BottomBar(selected = selected, onTabClick = onTabClick)
+
+            BottomBar(
+                selected = selected,
+                onTabClick = onTabClick
+            )
         }
     }
 }
@@ -740,12 +802,19 @@ fun ProfilePage(
 fun HoroscopePage(
     onBackClick: () -> Unit
 ) {
+
+    val viewModel: HoroscopeViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        viewModel.load("leo")
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
 
         Image(
-            painter = painterResource(R.drawable.horoscope),
+            painter = painterResource(R.drawable.matrix),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -782,10 +851,24 @@ fun HoroscopePage(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+
+                    Image(
+                        painter = painterResource(
+                            zodiacIcon(viewModel.sign)
+                        ),
+                        contentDescription = null,
+                        modifier = Modifier.size(180.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
                         containerColor = Color(0xFF5B3B8C)
                     ),
@@ -793,14 +876,12 @@ fun HoroscopePage(
                 ) {
 
                     Text(
-                        text = "Текст гороскопа дня...\n\nОчень много текста...\n\nОчень много текста...",
+                        text = viewModel.text,
                         color = Color.White,
                         fontSize = 18.sp,
                         modifier = Modifier.padding(20.dp)
                     )
                 }
-
-                Spacer(modifier = Modifier.height(400.dp))
             }
         }
     }
@@ -935,25 +1016,63 @@ fun BottomTab(
 }
 
 @Composable
-fun AdviceCard(title: String, text: String, icon: Int) {
+fun AdviceCard(
+    title: String,
+    text: String,
+    icon: Int
+) {
+
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF5B3B8C)),
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF5B3B8C)
+        ),
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(260.dp)
+            .height(300.dp)
     ) {
-        Box(modifier = Modifier.fillMaxSize().padding(20.dp)) {
-            Column {
-                Text(title, color = Color.White, fontSize = 24.sp, fontFamily = Playfair)
-                Spacer(modifier = Modifier.height(10.dp))
-                Text(text, color = Color.White, fontSize = 16.sp)
+
+        Box(
+            modifier = Modifier.fillMaxSize()
+        ) {
+
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+
+                item {
+
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontFamily = Playfair
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(10.dp)
+                    )
+
+                    Text(
+                        text = text,
+                        color = Color.White,
+                        fontSize = 16.sp
+                    )
+
+                    Spacer(
+                        modifier = Modifier.height(90.dp)
+                    )
+                }
             }
+
             Image(
                 painter = painterResource(icon),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
+                    .padding(16.dp)
                     .size(90.dp)
             )
         }
@@ -969,6 +1088,7 @@ fun AdviceMiniCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
+
     Card(
         colors = CardDefaults.cardColors(
             containerColor = cardColor
@@ -976,9 +1096,7 @@ fun AdviceMiniCard(
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
             .height(370.dp)
-            .clickable {
-                onClick()
-            }
+            .clickable { onClick() }
     ) {
 
         Box(
