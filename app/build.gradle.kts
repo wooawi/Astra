@@ -13,12 +13,14 @@ android {
 
     defaultConfig {
         applicationId = "com.example.astra"
-        minSdk = 36
+        minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField(
+            "String",
+            "ASTRO_API_KEY",
+            "\"f3505cf2f8e65bd9d9bbf75cbe25f0ec0caa80ad5a77bfa09e1cb779a31c9167\""
+        )
     }
 
     buildTypes {
@@ -34,9 +36,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+
     buildFeatures {
-        compose = true
+        android.buildFeatures.buildConfig = true
     }
+
 }
 
 dependencies {
@@ -55,10 +59,13 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.caverock:androidsvg:1.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.1")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("io.coil-kt:coil-compose:2.7.0")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

@@ -1,5 +1,6 @@
 package com.example.astra
 
+import MatrixViewModel
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.runtime.rememberCoroutineScope
@@ -44,6 +45,17 @@ import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.mutableStateOf
+import coil.compose.AsyncImage
+import android.graphics.drawable.PictureDrawable
+import android.view.View
+import android.widget.ImageView
+import androidx.compose.ui.viewinterop.AndroidView
+import com.caverock.androidsvg.SVG
+import retrofit2.http.Body
+import retrofit2.http.Header
+import retrofit2.http.POST
+import okhttp3.ResponseBody
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -131,8 +143,10 @@ fun AstraApp() {
                                 adviceScreen = AdviceScreen.MAIN
                             }
                         )
-
                         AdviceScreen.MATRIX -> MatrixPage(
+                            birthDate = date,
+                            birthTime = time,
+                            city = city,
                             onBackClick = {
                                 adviceScreen = AdviceScreen.MAIN
                             }
@@ -900,14 +914,30 @@ fun HoroscopePage(
 }
 @Composable
 fun MatrixPage(
+    birthDate: String,
+    birthTime: String,
+    city: String,
     onBackClick: () -> Unit
 ) {
+
+    val viewModel: MatrixViewModel = viewModel()
+
+    LaunchedEffect(Unit) {
+        viewModel.load(
+            date = birthDate,
+            time = birthTime,
+            city = city
+        )
+    }
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
 
         Image(
-            painter = painterResource(R.drawable.matrix),
+            painter = painterResource(
+                R.drawable.matrix
+            ),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -942,27 +972,59 @@ fun MatrixPage(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(
+                    modifier = Modifier.height(20.dp)
+                )
 
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 4.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF5B3B8C)
-                    ),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
+                if (viewModel.loading) {
 
-                    Text(
-                        text = "Текст матрицы дня...\n\nОчень много текста...\n\nОчень много текста...",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        modifier = Modifier.padding(20.dp)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(40.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+
+                        CircularProgressIndicator(
+                            color = Color.White
+                        )
+                    }
+
+                } else {
+
+                    SvgImage(
+                        svgContent = viewModel.svgChart,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(400.dp)
                     )
-                }
 
-                Spacer(modifier = Modifier.height(400.dp))
+                    Spacer(
+                        modifier = Modifier.height(20.dp)
+                    )
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = Color(
+                                0xFF5B3B8C
+                            )
+                        ),
+                        shape = RoundedCornerShape(
+                            24.dp
+                        )
+                    ) {
+
+                        Text(
+                            text = viewModel.description,
+                            color = Color.White,
+                            fontSize = 18.sp,
+                            modifier = Modifier.padding(
+                                20.dp
+                            )
+                        )
+                    }
+                }
             }
         }
     }
@@ -1153,4 +1215,40 @@ fun ProfileChip(text: String) {
             fontSize = 18.sp
         )
     }
+}
+@Composable
+fun SvgImage(
+    svgContent: String,
+    modifier: Modifier = Modifier
+) {
+
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+
+            ImageView(context).apply {
+                setLayerType(
+                    View.LAYER_TYPE_SOFTWARE,
+                    null
+                )
+            }
+        },
+        update = { imageView ->
+
+            if (svgContent.isNotEmpty()) {
+
+                val svg =
+                    SVG.getFromString(svgContent)
+
+                val drawable =
+                    PictureDrawable(
+                        svg.renderToPicture()
+                    )
+
+                imageView.setImageDrawable(
+                    drawable
+                )
+            }
+        }
+    )
 }
