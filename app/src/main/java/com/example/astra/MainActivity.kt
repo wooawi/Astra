@@ -1,6 +1,6 @@
 package com.example.astra
 
-import MatrixViewModel
+import com.example.astra.MatrixViewModel
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.runtime.rememberCoroutineScope
@@ -183,6 +183,8 @@ fun StartScreen(
     onTimeChange: (String) -> Unit,
     onCityChange: (String) -> Unit
 ) {
+    val viewModel: MatrixViewModel = viewModel()
+
     val whiteFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = Color.White,
         unfocusedTextColor = Color.White,
@@ -297,7 +299,6 @@ fun StartScreen(
                 )
             }
 
-
             Spacer(modifier = Modifier.height(12.dp))
 
             Box(
@@ -341,7 +342,6 @@ fun StartScreen(
                 )
             }
 
-
             Spacer(modifier = Modifier.height(12.dp))
 
             OutlinedTextField(
@@ -349,17 +349,40 @@ fun StartScreen(
                 onValueChange = {
                     city = it
                     onCityChange(it)
+                    viewModel.searchCity(it)
                 },
                 placeholder = {
                     Text(
-                        text = "Введите город",
-                        modifier = Modifier.padding(top = 3.dp)
+                        "Начните вводить город (например: Moscow, London...)",
+                        color = Color.White.copy(alpha = 0.7f)
                     )
                 },
                 colors = whiteFieldColors,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
+
+            if (viewModel.citySuggestions.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column {
+                        viewModel.citySuggestions.forEach { suggestion: String ->
+                            Text(
+                                text = suggestion,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        city = suggestion
+                                        onCityChange(suggestion)
+                                        viewModel.clearCitySuggestions()
+                                    }
+                                    .padding(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -912,6 +935,31 @@ fun HoroscopePage(
         }
     }
 }
+
+fun normalizeCity(city: String): String {
+
+    return when (city.trim().lowercase()) {
+
+        "москва" -> "Moscow"
+        "мск" -> "Moscow"
+
+        "санкт-петербург",
+        "питер",
+        "спб" -> "Saint Petersburg"
+
+        "новосибирск" -> "Novosibirsk"
+
+        "екатеринбург" -> "Yekaterinburg"
+
+        "казань" -> "Kazan"
+
+        "минск" -> "Minsk"
+
+        "киев" -> "Kyiv"
+
+        else -> city.trim()
+    }
+}
 @Composable
 fun MatrixPage(
     birthDate: String,
@@ -922,12 +970,18 @@ fun MatrixPage(
 
     val viewModel: MatrixViewModel = viewModel()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(city) {
+
         viewModel.load(
+
             date = birthDate,
+
             time = birthTime,
-            city = city
+
+            city = normalizeCity(city)
+
         )
+
     }
 
     Box(
@@ -992,12 +1046,26 @@ fun MatrixPage(
 
                 } else {
 
+                    Text(
+                        text = "Basic Vedic Chart",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontFamily = Playfair,
+                        modifier = Modifier.padding(bottom = 10.dp)
+                    )
+
                     SvgImage(
                         svgContent = viewModel.svgChart,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
                     )
+                    if (viewModel.svgChart.isBlank()) {
+                        Text(
+                            text = "PNG/SVG chart недоступен",
+                            color = Color.White
+                        )
+                    }
 
                     Spacer(
                         modifier = Modifier.height(20.dp)
@@ -1218,36 +1286,37 @@ fun ProfileChip(text: String) {
 }
 @Composable
 fun SvgImage(
-    svgContent: String,
+    svgContent: String?,
     modifier: Modifier = Modifier
 ) {
+    if (svgContent.isNullOrBlank() || !svgContent.contains("<svg")) {
+        Box(
+            modifier = modifier,
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "SVG недоступен",
+                color = Color.White
+            )
+        }
+        return
+    }
 
     AndroidView(
         modifier = modifier,
         factory = { context ->
-
             ImageView(context).apply {
-                setLayerType(
-                    View.LAYER_TYPE_SOFTWARE,
-                    null
-                )
+                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
             }
         },
         update = { imageView ->
-
-            if (svgContent.isNotEmpty()) {
-
-                val svg =
-                    SVG.getFromString(svgContent)
-
-                val drawable =
-                    PictureDrawable(
-                        svg.renderToPicture()
-                    )
-
+            try {
+                val svg = SVG.getFromString(svgContent)
                 imageView.setImageDrawable(
-                    drawable
+                    PictureDrawable(svg.renderToPicture())
                 )
+            } catch (e: Exception) {
+                imageView.setImageDrawable(null)
             }
         }
     )
