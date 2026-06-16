@@ -10,10 +10,11 @@ object RetrofitProvider {
     private const val BASE_URL =
         "https://api.freeastroapi.com/"
 
+
     private val okHttpClient =
         OkHttpClient.Builder()
             .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
             .writeTimeout(60, TimeUnit.SECONDS)
             .build()
 
@@ -21,23 +22,10 @@ object RetrofitProvider {
         Retrofit.Builder()
             .baseUrl(BASE_URL)
             .client(okHttpClient)
-            .addConverterFactory(
-                GsonConverterFactory.create()
-            )
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-    val vedicApi =
-        retrofit.create(
-            VedicApi::class.java
-        )
+    val vedicApi = retrofit.create(VedicApi::class.java)
 
-    val westernApi =
-        retrofit.create(
-            WesternApi::class.java
-        )
-
-    val geoApi =
-        retrofit.create(
-            GeoApi::class.java
-        )
+    val geoApi = retrofit.create(GeoApi::class.java)
 }

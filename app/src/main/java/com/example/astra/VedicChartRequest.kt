@@ -12,7 +12,5 @@ data class VedicChartRequest(
     val tz_str: String? = null,
     val ayanamsha: String = "lahiri",
     val house_system: String = "whole_sign",
-    val node_type: String = "mean",
-    val format: String = "png",
-    val theme_type: String = "dark"
+    val node_type: String = "mean"
 )

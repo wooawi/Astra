@@ -3,6 +3,7 @@ package com.example.astra
 data class MoonResponse(
     val phase: Phase,
     val interpretation: Interpretation?
+
 )
 
 data class Phase(

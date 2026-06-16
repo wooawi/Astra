@@ -46,16 +46,9 @@ import java.time.format.TextStyle
 import java.util.Locale
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.mutableStateOf
-import coil.compose.AsyncImage
-import android.graphics.drawable.PictureDrawable
-import android.view.View
-import android.widget.ImageView
-import androidx.compose.ui.viewinterop.AndroidView
-import com.caverock.androidsvg.SVG
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.POST
-import okhttp3.ResponseBody
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.nativeCanvas
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -188,32 +181,26 @@ fun StartScreen(
     val whiteFieldColors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = Color.White,
         unfocusedTextColor = Color.White,
-
         focusedBorderColor = Color.White,
         unfocusedBorderColor = Color.White,
-
         focusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
         unfocusedPlaceholderColor = Color.White.copy(alpha = 0.7f),
-
         focusedContainerColor = Color.Transparent,
         unfocusedContainerColor = Color.Transparent,
         disabledContainerColor = Color.Transparent,
-
         disabledTextColor = Color.White,
         disabledBorderColor = Color.White
     )
 
     var name by rememberSaveable { mutableStateOf("") }
     var city by rememberSaveable { mutableStateOf("") }
-
     var date by rememberSaveable { mutableStateOf("") }
     var time by rememberSaveable { mutableStateOf("") }
+    var showError by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
             painter = painterResource(R.drawable.bgbg),
@@ -261,19 +248,11 @@ fun StartScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-
                         val cal = Calendar.getInstance()
-
                         DatePickerDialog(
                             context,
                             { _, year, month, day ->
-
-                                date = "%02d.%02d.%04d".format(
-                                    day,
-                                    month + 1,
-                                    year
-                                )
-
+                                date = "%02d.%02d.%04d".format(day, month + 1, year)
                                 onDateChange(date)
                             },
                             cal.get(Calendar.YEAR),
@@ -305,18 +284,11 @@ fun StartScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-
                         val cal = Calendar.getInstance()
-
                         TimePickerDialog(
                             context,
                             { _, hour, minute ->
-
-                                time = "%02d:%02d".format(
-                                    hour,
-                                    minute
-                                )
-
+                                time = "%02d:%02d".format(hour, minute)
                                 onTimeChange(time)
                             },
                             cal.get(Calendar.HOUR_OF_DAY),
@@ -363,9 +335,7 @@ fun StartScreen(
             )
 
             if (viewModel.citySuggestions.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth()
-                ) {
+                Card(modifier = Modifier.fillMaxWidth()) {
                     Column {
                         viewModel.citySuggestions.forEach { suggestion: String ->
                             Text(
@@ -386,11 +356,26 @@ fun StartScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            if (showError) {
+                Text(
+                    text = "Пожалуйста, заполните все поля",
+                    color = Color(0xFFFF6B6B),
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
             IconButton(
-                onClick = onNextClick,
+                onClick = {
+                    if (name.isBlank() || date.isBlank() || time.isBlank() || city.isBlank()) {
+                        showError = true
+                    } else {
+                        showError = false
+                        onNextClick()
+                    }
+                },
                 modifier = Modifier.size(72.dp)
             ) {
-
                 Icon(
                     painter = painterResource(
                         R.drawable.baseline_arrow_circle_right_24
@@ -663,9 +648,7 @@ fun AdvicePage(
 ) {
     val moonViewModel: MoonViewModel = viewModel()
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
             painter = painterResource(R.drawable.advice),
@@ -680,7 +663,6 @@ fun AdvicePage(
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(50.dp))
 
             AdviceCard(
@@ -691,10 +673,7 @@ fun AdvicePage(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth()
-            ) {
-
+            Row(modifier = Modifier.fillMaxWidth()) {
                 val sign = getZodiacSign(userBirthDate)
 
                 AdviceMiniCard(
@@ -719,12 +698,8 @@ fun AdvicePage(
             }
         }
 
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-
+        Column(modifier = Modifier.fillMaxSize()) {
             Spacer(modifier = Modifier.weight(1f))
-
             BottomBar(
                 selected = selected,
                 onTabClick = onTabClick
@@ -1046,26 +1021,13 @@ fun MatrixPage(
 
                 } else {
 
-                    Text(
-                        text = "Basic Vedic Chart",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontFamily = Playfair,
-                        modifier = Modifier.padding(bottom = 10.dp)
-                    )
-
-                    SvgImage(
-                        svgContent = viewModel.svgChart,
+                    VedicChartCanvas(
+                        ascendant = viewModel.ascendant,
+                        planets = viewModel.planets,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(400.dp)
                     )
-                    if (viewModel.svgChart.isBlank()) {
-                        Text(
-                            text = "PNG/SVG chart недоступен",
-                            color = Color.White
-                        )
-                    }
 
                     Spacer(
                         modifier = Modifier.height(20.dp)
@@ -1156,14 +1118,12 @@ fun BottomTab(
         Text(text = title, color = Color.White, fontSize = 13.sp)
     }
 }
-
 @Composable
 fun AdviceCard(
     title: String,
     text: String,
     icon: Int
 ) {
-
     Card(
         colors = CardDefaults.cardColors(
             containerColor = Color(0xFF5B3B8C)
@@ -1171,44 +1131,30 @@ fun AdviceCard(
         shape = RoundedCornerShape(24.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .height(300.dp)
+            .height(300.dp) // было height(300.dp) — оставляем
     ) {
-
-        Box(
-            modifier = Modifier.fillMaxSize()
-        ) {
-
+        Box(modifier = Modifier.fillMaxSize()) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(20.dp)
             ) {
-
                 item {
-
                     Text(
                         text = title,
                         color = Color.White,
                         fontSize = 24.sp,
                         fontFamily = Playfair
                     )
-
-                    Spacer(
-                        modifier = Modifier.height(10.dp)
-                    )
-
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = text,
                         color = Color.White,
                         fontSize = 16.sp
                     )
-
-                    Spacer(
-                        modifier = Modifier.height(90.dp)
-                    )
+                    Spacer(modifier = Modifier.height(90.dp))
                 }
             }
-
             Image(
                 painter = painterResource(icon),
                 contentDescription = null,
@@ -1230,7 +1176,6 @@ fun AdviceMiniCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit
 ) {
-
     Card(
         colors = CardDefaults.cardColors(
             containerColor = cardColor
@@ -1240,20 +1185,17 @@ fun AdviceMiniCard(
             .height(370.dp)
             .clickable { onClick() }
     ) {
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-
             Text(
                 text = title,
                 color = textColor,
                 fontSize = 20.sp,
                 fontFamily = Playfair
             )
-
             Image(
                 painter = painterResource(icon),
                 contentDescription = null,
@@ -1284,40 +1226,278 @@ fun ProfileChip(text: String) {
         )
     }
 }
+
+
 @Composable
-fun SvgImage(
-    svgContent: String?,
+fun VedicChartCanvas(
+    ascendant: com.example.astra.model.Ascendant?,
+    planets: List<com.example.astra.model.Planet>,
     modifier: Modifier = Modifier
 ) {
-    if (svgContent.isNullOrBlank() || !svgContent.contains("<svg")) {
-        Box(
-            modifier = modifier,
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "SVG недоступен",
-                color = Color.White
-            )
-        }
-        return
+    val zodiacRu = listOf(
+        "Овен", "Телец", "Близнецы", "Рак",
+        "Лев", "Дева", "Весы", "Скорпион",
+        "Стрелец", "Козерог", "Водолей", "Рыбы"
+    )
+    val zodiacSymbols = listOf(
+        "♈", "♉", "♊", "♋", "♌", "♍",
+        "♎", "♏", "♐", "♑", "♒", "♓"
+    )
+    val zodiacEn = listOf(
+        "Aries", "Taurus", "Gemini", "Cancer",
+        "Leo", "Virgo", "Libra", "Scorpio",
+        "Sagittarius", "Capricorn", "Aquarius", "Pisces"
+    )
+    val planetSymbols = mapOf(
+        "Su" to "☀", "Mo" to "☽", "Ma" to "♂",
+        "Me" to "☿", "Ju" to "♃", "Ve" to "♀",
+        "Sa" to "♄", "Ra" to "☊", "Ke" to "☋",
+        "Ur" to "♅", "Ne" to "♆", "Pl" to "♇"
+    )
+
+    val ascSignIndex = ascendant?.let {
+        zodiacEn.indexOfFirst { s -> s.equals(it.sign, ignoreCase = true) }
+    }?.takeIf { it >= 0 } ?: 0
+
+    val planetsByHouse = mutableMapOf<Int, MutableList<String>>()
+    for (p in planets) {
+        val abbr = p.name.take(2)
+        planetsByHouse.getOrPut(p.house) { mutableListOf() }.add(abbr)
     }
 
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            ImageView(context).apply {
-                setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+    val cellPositions = listOf(
+        Pair(0, 0), Pair(0, 1), Pair(0, 2), Pair(0, 3),
+        Pair(1, 3), Pair(2, 3), Pair(3, 3), Pair(3, 2),
+        Pair(3, 1), Pair(3, 0), Pair(2, 0), Pair(1, 0)
+    )
+
+
+    val elementColors = listOf(
+        android.graphics.Color.argb(60, 220, 80, 80),   // Огонь: 1,5,9
+        android.graphics.Color.argb(60, 80, 180, 80),   // Земля: 2,6,10
+        android.graphics.Color.argb(60, 80, 160, 220),  // Воздух: 3,7,11
+        android.graphics.Color.argb(60, 80, 100, 220),  // Вода: 4,8,12
+    )
+    val elementColorsLight = listOf(
+        android.graphics.Color.argb(120, 255, 100, 100),
+        android.graphics.Color.argb(120, 100, 220, 100),
+        android.graphics.Color.argb(120, 100, 200, 255),
+        android.graphics.Color.argb(120, 100, 120, 255),
+    )
+
+    fun houseElement(house: Int): Int = when (house % 3) {
+        1 -> 0
+        2 -> 1
+        0 -> if (house % 12 == 0 || house == 12) 3 else 2
+        else -> 2
+    }
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val cellW = w / 4f
+        val cellH = h / 4f
+        val cornerR = 12f
+
+
+        drawRect(color = Color(0xFF0D0620))
+
+        drawContext.canvas.nativeCanvas.apply {
+
+            val borderPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(100, 180, 130, 255)
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 1f
+                isAntiAlias = true
             }
-        },
-        update = { imageView ->
-            try {
-                val svg = SVG.getFromString(svgContent)
-                imageView.setImageDrawable(
-                    PictureDrawable(svg.renderToPicture())
+            val fillPaint = android.graphics.Paint().apply {
+                style = android.graphics.Paint.Style.FILL
+                isAntiAlias = true
+            }
+            val glowPaint = android.graphics.Paint().apply {
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 3f
+                isAntiAlias = true
+                maskFilter = android.graphics.BlurMaskFilter(
+                    8f, android.graphics.BlurMaskFilter.Blur.NORMAL
                 )
-            } catch (e: Exception) {
-                imageView.setImageDrawable(null)
+            }
+
+            for (i in 0..11) {
+                val (row, col) = cellPositions[i]
+                val left = col * cellW
+                val top = row * cellH
+                val right = left + cellW
+                val bottom = top + cellH
+                val signIndex = (ascSignIndex + i) % 12
+                val houseNum = i + 1
+                val elemIdx = houseElement(houseNum)
+
+
+                fillPaint.color = if (i == 0)
+                    android.graphics.Color.argb(100, 140, 60, 200)
+                else
+                    elementColors[elemIdx]
+                val rect = android.graphics.RectF(left + 1, top + 1, right - 1, bottom - 1)
+                drawRoundRect(rect, cornerR, cornerR, fillPaint)
+
+
+                borderPaint.color = if (i == 0)
+                    android.graphics.Color.argb(200, 255, 107, 157)
+                else
+                    android.graphics.Color.argb(80, 180, 130, 255)
+                drawRoundRect(rect, cornerR, cornerR, borderPaint)
+
+
+                val bgSymbolPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(25, 255, 255, 255)
+                    textSize = cellH * 0.55f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText(
+                    zodiacSymbols[signIndex],
+                    left + cellW / 2,
+                    top + cellH * 0.72f,
+                    bgSymbolPaint
+                )
+
+
+                val housePaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(180, 255, 255, 255)
+                    textSize = cellW * 0.115f
+                    isAntiAlias = true
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                }
+                drawText("$houseNum", left + cellW * 0.08f, top + cellH * 0.22f, housePaint)
+
+
+                val smallSymPaint = android.graphics.Paint().apply {
+                    color = elementColorsLight[elemIdx]
+                    textSize = cellW * 0.13f
+                    isAntiAlias = true
+                }
+                drawText(
+                    zodiacSymbols[signIndex],
+                    left + cellW * 0.08f,
+                    bottom - cellH * 0.07f,
+                    smallSymPaint
+                )
+
+
+                if (i == 0) {
+                    val ascPaint = android.graphics.Paint().apply {
+                        color = android.graphics.Color.argb(255, 255, 107, 157)
+                        textSize = cellW * 0.13f
+                        isAntiAlias = true
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                        textAlign = android.graphics.Paint.Align.RIGHT
+                    }
+                    drawText("Asc", right - cellW * 0.06f, top + cellH * 0.22f, ascPaint)
+
+
+                    glowPaint.color = android.graphics.Color.argb(80, 255, 107, 157)
+                    drawRoundRect(rect, cornerR, cornerR, glowPaint)
+                }
+
+
+                val planetsHere = planetsByHouse[houseNum] ?: emptyList()
+                val planetPaint = android.graphics.Paint().apply {
+                    isAntiAlias = true
+                    typeface = android.graphics.Typeface.DEFAULT_BOLD
+                }
+
+                val maxPerRow = 2
+                planetsHere.forEachIndexed { idx, pAbbr ->
+                    val sym = planetSymbols[pAbbr] ?: pAbbr
+                    val row2 = idx / maxPerRow
+                    val col2 = idx % maxPerRow
+                    planetPaint.textSize = cellW * 0.155f
+                    planetPaint.color = when (pAbbr) {
+                        "Su" -> android.graphics.Color.argb(255, 255, 200, 50)
+                        "Mo" -> android.graphics.Color.argb(255, 200, 220, 255)
+                        "Ma" -> android.graphics.Color.argb(255, 255, 80, 80)
+                        "Me" -> android.graphics.Color.argb(255, 100, 255, 150)
+                        "Ju" -> android.graphics.Color.argb(255, 255, 180, 50)
+                        "Ve" -> android.graphics.Color.argb(255, 255, 150, 200)
+                        "Sa" -> android.graphics.Color.argb(255, 150, 150, 220)
+                        "Ra" -> android.graphics.Color.argb(255, 180, 100, 255)
+                        "Ke" -> android.graphics.Color.argb(255, 130, 200, 255)
+                        else -> android.graphics.Color.argb(255, 220, 220, 220)
+                    }
+                    val px = left + cellW * (0.12f + col2 * 0.48f)
+                    val py = top + cellH * (0.42f + row2 * 0.28f)
+                    drawText(sym, px, py, planetPaint)
+                }
+            }
+
+
+            val cx = cellW
+            val cy = cellH
+            val cw = cellW * 2f
+            val ch = cellH * 2f
+            val centerRect = android.graphics.RectF(cx, cy, cx + cw, cy + ch)
+
+            fillPaint.color = android.graphics.Color.argb(80, 60, 20, 120)
+            drawRoundRect(centerRect, 20f, 20f, fillPaint)
+
+
+            val mandalaPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(40, 200, 150, 255)
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 1f
+                isAntiAlias = true
+            }
+            val midX = cx + cw / 2
+            val midY = cy + ch / 2
+            val r1 = cw * 0.35f
+            val r2 = cw * 0.22f
+
+
+            drawCircle(midX, midY, r1, mandalaPaint)
+            drawCircle(midX, midY, r2, mandalaPaint)
+
+
+            for (angle in 0..330 step 30) {
+                val rad = Math.toRadians(angle.toDouble())
+                drawLine(
+                    midX + (r2 * Math.cos(rad)).toFloat(),
+                    midY + (r2 * Math.sin(rad)).toFloat(),
+                    midX + (r1 * Math.cos(rad)).toFloat(),
+                    midY + (r1 * Math.sin(rad)).toFloat(),
+                    mandalaPaint
+                )
+            }
+
+
+            val centerBorderPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(120, 180, 130, 255)
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 1.5f
+                isAntiAlias = true
+            }
+            drawRoundRect(centerRect, 20f, 20f, centerBorderPaint)
+
+
+            val centerPaint = android.graphics.Paint().apply {
+                color = android.graphics.Color.argb(220, 230, 200, 255)
+                textSize = cellW * 0.17f
+                isAntiAlias = true
+                textAlign = android.graphics.Paint.Align.CENTER
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+            }
+            drawText("✦ Ведическая", midX, midY - cellH * 0.08f, centerPaint)
+            drawText("карта ✦", midX, midY + cellH * 0.12f, centerPaint)
+
+            ascendant?.let {
+                val subPaint = android.graphics.Paint().apply {
+                    color = android.graphics.Color.argb(180, 255, 107, 157)
+                    textSize = cellW * 0.115f
+                    isAntiAlias = true
+                    textAlign = android.graphics.Paint.Align.CENTER
+                }
+                drawText("Асц: ${it.sign}", midX, midY + cellH * 0.32f, subPaint)
             }
         }
-    )
+    }
 }
