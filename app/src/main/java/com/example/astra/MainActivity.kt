@@ -1050,13 +1050,13 @@ fun AdviceMiniCard(
         ),
         shape = RoundedCornerShape(24.dp),
         modifier = modifier
-            .height(370.dp)
+            .height(340.dp)
             .clickable { onClick() }
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(10.dp)
         ) {
             Text(
                 text = title,
