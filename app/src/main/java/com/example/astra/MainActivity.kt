@@ -48,6 +48,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import com.example.astra.model.City
+
 
 
 class MainActivity : ComponentActivity() {
@@ -75,7 +80,7 @@ fun AstraApp() {
     var name by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("") }
     var time by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("") }
+    var city by remember { mutableStateOf<City?>(null) }
     var started by remember { mutableStateOf(false) }
 
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
@@ -103,47 +108,39 @@ fun AstraApp() {
                 0 -> MoonPage(
                     selected = pagerState.currentPage,
                     selectedDate = selectedMoonDate,
-                    onDateChange = {
-                        selectedMoonDate = it
-                    },
+                    onDateChange = { selectedMoonDate = it },
                     onTabClick = { pageIndex ->
-                        scope.launch {
-                            pagerState.animateScrollToPage(pageIndex)
-                        }
+                        scope.launch { pagerState.animateScrollToPage(pageIndex) }
                     }
                 )
                 1 -> {
                     when (adviceScreen) {
-
                         AdviceScreen.MAIN -> AdvicePage(
                             selected = pagerState.currentPage,
                             userBirthDate = date,
                             onTabClick = { pageIndex ->
-                                scope.launch {
-                                    pagerState.animateScrollToPage(pageIndex)
-                                }
+                                scope.launch { pagerState.animateScrollToPage(pageIndex) }
                             },
-                            onHoroscopeClick = {
-                                adviceScreen = AdviceScreen.HOROSCOPE
-                            },
-                            onMatrixClick = {
-                                adviceScreen = AdviceScreen.MATRIX
-                            }
+                            onHoroscopeClick = { adviceScreen = AdviceScreen.HOROSCOPE },
+                            onMatrixClick = { adviceScreen = AdviceScreen.MATRIX }
                         )
                         AdviceScreen.HOROSCOPE -> HoroscopePage(
                             userBirthDate = date,
-                            onBackClick = {
+                            onBackClick = { adviceScreen = AdviceScreen.MAIN }
+                        )
+                        AdviceScreen.MATRIX -> {
+                            val selectedCity = city
+                            if (selectedCity != null) {
+                                MatrixPage(
+                                    birthDate = date,
+                                    birthTime = time,
+                                    city = selectedCity,
+                                    onBackClick = { adviceScreen = AdviceScreen.MAIN }
+                                )
+                            } else {
                                 adviceScreen = AdviceScreen.MAIN
                             }
-                        )
-                        AdviceScreen.MATRIX -> MatrixPage(
-                            birthDate = date,
-                            birthTime = time,
-                            city = city,
-                            onBackClick = {
-                                adviceScreen = AdviceScreen.MAIN
-                            }
-                        )
+                        }
                     }
                 }
                 2 -> ProfilePage(
@@ -152,16 +149,10 @@ fun AstraApp() {
                     date = date,
                     time = time,
                     city = city,
-                    onExitClick = {
-                        (context as? ComponentActivity)?.finish()
-                    },
-                    onEditClick = {
-                        started = false
-                    },
+                    onExitClick = { (context as? ComponentActivity)?.finish() },
+                    onEditClick = { started = false },
                     onTabClick = { pageIndex ->
-                        scope.launch {
-                            pagerState.animateScrollToPage(pageIndex)
-                        }
+                        scope.launch { pagerState.animateScrollToPage(pageIndex) }
                     }
                 )
             }
@@ -174,7 +165,7 @@ fun StartScreen(
     onNameChange: (String) -> Unit,
     onDateChange: (String) -> Unit,
     onTimeChange: (String) -> Unit,
-    onCityChange: (String) -> Unit
+    onCityChange: (City) -> Unit
 ) {
     val viewModel: MatrixViewModel = viewModel()
 
@@ -193,7 +184,8 @@ fun StartScreen(
     )
 
     var name by rememberSaveable { mutableStateOf("") }
-    var city by rememberSaveable { mutableStateOf("") }
+    var cityInput by rememberSaveable { mutableStateOf("") }      // текст в поле
+    var selectedCity by rememberSaveable { mutableStateOf<City?>(null) } // выбранный город
     var date by rememberSaveable { mutableStateOf("") }
     var time by rememberSaveable { mutableStateOf("") }
     var showError by rememberSaveable { mutableStateOf(false) }
@@ -212,7 +204,7 @@ fun StartScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp, vertical = 32.dp),
+                .padding(horizontal = 24.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(modifier = Modifier.height(34.dp))
@@ -316,43 +308,21 @@ fun StartScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            OutlinedTextField(
-                value = city,
+            CityAutocomplete(
+                value = cityInput,
                 onValueChange = {
-                    city = it
-                    onCityChange(it)
+                    cityInput = it
+                    selectedCity = null
                     viewModel.searchCity(it)
                 },
-                placeholder = {
-                    Text(
-                        "Начните вводить город (например: Moscow, London...)",
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                },
-                colors = whiteFieldColors,
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (viewModel.citySuggestions.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column {
-                        viewModel.citySuggestions.forEach { suggestion: String ->
-                            Text(
-                                text = suggestion,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        city = suggestion
-                                        onCityChange(suggestion)
-                                        viewModel.clearCitySuggestions()
-                                    }
-                                    .padding(12.dp)
-                            )
-                        }
-                    }
+                suggestions = viewModel.citySuggestions,
+                onSelect = { picked ->
+                    selectedCity = picked
+                    cityInput = picked.name
+                    onCityChange(picked)
+                    viewModel.clearCitySuggestions()
                 }
-            }
+            )
 
             Spacer(modifier = Modifier.height(24.dp))
 
@@ -367,7 +337,7 @@ fun StartScreen(
 
             IconButton(
                 onClick = {
-                    if (name.isBlank() || date.isBlank() || time.isBlank() || city.isBlank()) {
+                    if (name.isBlank() || date.isBlank() || time.isBlank() || selectedCity == null) {
                         showError = true
                     } else {
                         showError = false
@@ -377,9 +347,7 @@ fun StartScreen(
                 modifier = Modifier.size(72.dp)
             ) {
                 Icon(
-                    painter = painterResource(
-                        R.drawable.baseline_arrow_circle_right_24
-                    ),
+                    painter = painterResource(R.drawable.baseline_arrow_circle_right_24),
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(56.dp)
@@ -707,19 +675,17 @@ fun AdvicePage(
         }
     }
 }
-
 @Composable
 fun ProfilePage(
     selected: Int,
     name: String,
     date: String,
     time: String,
-    city: String,
+    city: City?,                     // ← было String
     onExitClick: () -> Unit,
     onEditClick: () -> Unit,
     onTabClick: (Int) -> Unit
 ) {
-
     Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
@@ -736,19 +702,14 @@ fun ProfilePage(
             horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Text(
                 text = "Выход",
                 color = Color.White,
                 fontFamily = Playfair,
                 fontSize = 22.sp
             )
-
             Spacer(modifier = Modifier.width(10.dp))
-
-            IconButton(
-                onClick = onExitClick
-            ) {
+            IconButton(onClick = onExitClick) {
                 Icon(
                     painter = painterResource(id = R.drawable.exit),
                     contentDescription = null,
@@ -761,7 +722,6 @@ fun ProfilePage(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(380.dp))
 
             Column(
@@ -770,41 +730,25 @@ fun ProfilePage(
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                ProfileChip(text = name.ifBlank { "Имя не задано" })
 
                 ProfileChip(
-                    text = name.ifBlank {
-                        "Имя не задано"
-                    }
+                    text = if (date.isBlank()) "Дата рождения не задана" else "Дата рождения: $date"
                 )
 
                 ProfileChip(
-                    text = if (date.isBlank())
-                        "Дата рождения не задана"
-                    else
-                        "Дата рождения: $date"
+                    text = if (time.isBlank()) "Время рождения не задано" else "Время рождения: $time"
                 )
 
                 ProfileChip(
-                    text = if (time.isBlank())
-                        "Время рождения не задано"
-                    else
-                        "Время рождения: $time"
-                )
-
-                ProfileChip(
-                    text = if (city.isBlank())
-                        "Город не выбран"
-                    else
-                        "Город: $city"
+                    text = if (city == null) "Город не выбран" else "Город: ${city.name} ${countryFlag(city.country)}"
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Button(
                     onClick = onEditClick,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF5B3B8C)
-                    ),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF5B3B8C)),
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Text("Изменить")
@@ -813,10 +757,7 @@ fun ProfilePage(
 
             Spacer(modifier = Modifier.weight(1f))
 
-            BottomBar(
-                selected = selected,
-                onTabClick = onTabClick
-            )
+            BottomBar(selected = selected, onTabClick = onTabClick)
         }
     }
 }
@@ -911,62 +852,27 @@ fun HoroscopePage(
     }
 }
 
-fun normalizeCity(city: String): String {
-
-    return when (city.trim().lowercase()) {
-
-        "москва" -> "Moscow"
-        "мск" -> "Moscow"
-
-        "санкт-петербург",
-        "питер",
-        "спб" -> "Saint Petersburg"
-
-        "новосибирск" -> "Novosibirsk"
-
-        "екатеринбург" -> "Yekaterinburg"
-
-        "казань" -> "Kazan"
-
-        "минск" -> "Minsk"
-
-        "киев" -> "Kyiv"
-
-        else -> city.trim()
-    }
-}
 @Composable
 fun MatrixPage(
     birthDate: String,
     birthTime: String,
-    city: String,
+    city: City,
     onBackClick: () -> Unit
 ) {
-
     val viewModel: MatrixViewModel = viewModel()
 
     LaunchedEffect(city) {
-
         viewModel.load(
-
             date = birthDate,
-
             time = birthTime,
-
-            city = normalizeCity(city)
-
+            city = city
         )
-
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
 
         Image(
-            painter = painterResource(
-                R.drawable.matrix
-            ),
+            painter = painterResource(R.drawable.matrix),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -974,84 +880,46 @@ fun MatrixPage(
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 20.dp,
-                end = 20.dp,
-                top = 70.dp,
-                bottom = 40.dp
-            )
+            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 70.dp, bottom = 40.dp)
         ) {
-
             item {
-
-                IconButton(
-                    onClick = onBackClick
-                ) {
+                IconButton(onClick = onBackClick) {
                     Icon(
-                        painter = painterResource(
-                            R.drawable.baseline_arrow_circle_right_24
-                        ),
+                        painter = painterResource(R.drawable.baseline_arrow_circle_right_24),
                         contentDescription = null,
                         tint = Color.White,
-                        modifier = Modifier
-                            .size(42.dp)
-                            .graphicsLayer {
-                                scaleX = -1f
-                            }
+                        modifier = Modifier.size(42.dp).graphicsLayer { scaleX = -1f }
                     )
                 }
 
-                Spacer(
-                    modifier = Modifier.height(20.dp)
-                )
+                Spacer(modifier = Modifier.height(20.dp))
 
                 if (viewModel.loading) {
-
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(40.dp),
+                        modifier = Modifier.fillMaxWidth().padding(40.dp),
                         contentAlignment = Alignment.Center
                     ) {
-
-                        CircularProgressIndicator(
-                            color = Color.White
-                        )
+                        CircularProgressIndicator(color = Color.White)
                     }
-
                 } else {
-
                     VedicChartCanvas(
                         ascendant = viewModel.ascendant,
                         planets = viewModel.planets,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(400.dp)
+                        modifier = Modifier.fillMaxWidth().height(400.dp)
                     )
 
-                    Spacer(
-                        modifier = Modifier.height(20.dp)
-                    )
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(
-                                0xFF5B3B8C
-                            )
-                        ),
-                        shape = RoundedCornerShape(
-                            24.dp
-                        )
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFF5B3B8C)),
+                        shape = RoundedCornerShape(24.dp)
                     ) {
-
                         Text(
                             text = viewModel.description,
                             color = Color.White,
                             fontSize = 18.sp,
-                            modifier = Modifier.padding(
-                                20.dp
-                            )
+                            modifier = Modifier.padding(20.dp)
                         )
                     }
                 }
@@ -1500,4 +1368,100 @@ fun VedicChartCanvas(
             }
         }
     }
+}
+@Composable
+fun CityAutocomplete(
+    value: String,
+    onValueChange: (String) -> Unit,
+    suggestions: List<City>,
+    onSelect: (City) -> Unit
+) {
+
+    Column {
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = {
+                Text("Город (Berlin, Moscow)", color = Color.White.copy(0.6f))
+            },
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedTextColor = Color.White,
+                unfocusedTextColor = Color.White,
+                focusedBorderColor = Color.White,
+                unfocusedBorderColor = Color.White,
+                focusedContainerColor = Color.Transparent,
+                unfocusedContainerColor = Color.Transparent
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        if (suggestions.isNotEmpty()) {
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color(0xFF2A1835)
+                )
+            ) {
+
+                Column {
+
+                    suggestions.take(8).forEach { city ->
+
+                        CityRow(
+                            city = city,
+                            query = value,
+                            onClick = { onSelect(city) }
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+@Composable
+fun CityRow(
+    city: City,
+    query: String,
+    onClick: () -> Unit
+) {
+
+    val start = city.name.lowercase().indexOf(query.lowercase())
+
+    val text = buildAnnotatedString {
+
+        if (start >= 0) {
+
+            append(city.name.substring(0, start))
+
+            withStyle(
+                SpanStyle(
+                    color = Color(0xFFFFD54F),
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(city.name.substring(start, start + query.length))
+            }
+
+            append(city.name.substring(start + query.length))
+
+        } else {
+            append(city.name)
+        }
+
+        append("  ${countryFlag(city.country)}")
+    }
+
+    Text(
+        text = text,
+        color = Color.White,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(14.dp)
+    )
 }

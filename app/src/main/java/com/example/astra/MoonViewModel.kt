@@ -1,16 +1,22 @@
 package com.example.astra
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
-import retrofit2.HttpException
 
 class MoonViewModel : ViewModel() {
 
     var moonPhase by mutableStateOf("")
+        private set
+
     var moonText by mutableStateOf("")
+        private set
+
     var illumination by mutableStateOf(0)
+        private set
 
     fun loadMoon(dateTime: String) {
 
@@ -23,15 +29,23 @@ class MoonViewModel : ViewModel() {
                         .getMoonPhase(dateTime)
 
                 moonPhase =
-                    response.phase.name
+                    phaseRu(response.phase.name)
 
                 illumination =
                     (response.phase.illumination * 100)
                         .toInt()
 
                 moonText =
-                    response.interpretation?.body
-                        ?: ""
+                    if (!response.interpretation?.body.isNullOrBlank()) {
+
+                        TranslatorHelper.translateToRussian(
+                            response.interpretation!!.body
+                        )
+
+                    } else {
+
+                        ""
+                    }
 
             } catch (e: Exception) {
 
@@ -39,5 +53,25 @@ class MoonViewModel : ViewModel() {
                     e.message ?: "Ошибка"
             }
         }
+    }
+    private fun phaseRu(name: String): String = when (name) {
+
+        "New Moon" -> "Новолуние"
+
+        "Waxing Crescent" -> "Растущий серп"
+
+        "First Quarter" -> "Первая четверть"
+
+        "Waxing Gibbous" -> "Растущая Луна"
+
+        "Full Moon" -> "Полнолуние"
+
+        "Waning Gibbous" -> "Убывающая Луна"
+
+        "Last Quarter" -> "Последняя четверть"
+
+        "Waning Crescent" -> "Стареющий серп"
+
+        else -> name
     }
 }
